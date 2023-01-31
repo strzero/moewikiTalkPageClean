@@ -11,6 +11,9 @@
 // ==/UserScript==
 
 $(function () {
+    var deleteTagList = ['BIG', 'I', 'B'];
+    var separatorList = ['—', '-'];
+
     var findImage = function (node) {
         if (node.tagName == 'IMG') {
             deleteImages(node);
@@ -31,9 +34,18 @@ $(function () {
         //         image.parentNode.remove();
         //     }
         //     else {
-                image.remove();
+        image.remove();
         //     }
         // }
+    }
+
+    var deleteTag = function (node) {
+        var child = node.firstChild;
+        while (child) {
+            node.parentNode.insertBefore(child, node);
+            child = child.nextSibling;
+        }
+        node.remove();
     }
 
     var clean = function (node) {
@@ -41,10 +53,22 @@ $(function () {
         if (node.nodeType != 3) {
             node.removeAttribute("style");
             node.removeAttribute("class");
-            var child = node.firstChild;
-            while (child) {
-                clean(child);
-                child = child.nextSibling;
+            if (node.tagName != 'DL') {
+                var child = node.firstChild;
+                while (child) {
+                    clean(child);
+
+                    // 如果发现特殊标签，删除标签
+                    var makeDeleteTag = false;
+                    deleteTagList.forEach((value) => { if (node.tagName == value) makeDeleteTag = true; })
+                    if (makeDeleteTag) {
+                        var temp = child.nextSibling;
+                        deleteTag(node);
+                        child = temp;
+                    } else {
+                        child = child.nextSibling;
+                    }
+                }
             }
         }
     }
@@ -75,12 +99,6 @@ $(function () {
         }
     }
 
-    // var deleteTag = function (node) {
-    //     var child = node.firstChild;
-    //     while (child) {
-
-    //     }
-    // }
 
     var cleanFromSeparator = function (node) {
         var allClean = false;
@@ -88,8 +106,9 @@ $(function () {
         var child = node.firstChild;
         while (child) {
             // 如果满足下述条件，任何情况都清理触发条件之后的任何元素
-            if (child.nodeType == 3 && (child.nodeValue.lastIndexOf('—') != -1 || child.nodeValue.lastIndexOf('-') != -1)) {
-                allClean = true;
+            if (child.nodeType == 3) {
+                separatorList.forEach((value) => { if (child.nodeValue.lastIndexOf(value) != -1) allClean = true; })
+
             }
             // 如果已发现分隔符，那么清除所有样式。
             if (allClean) {
