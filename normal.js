@@ -1,18 +1,7 @@
-// ==UserScript==
-// @name         ClearTalkPage
-// @namespace    http://tampermonkey.net/
-// @version      0.1
-// @description  try to take over the world!
-// @author       You
-// @match        https://zh.moegirl.org.cn/*
-// @match        https://mzh.moegirl.org.cn/*
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=moegirl.org.cn
-// @grant        none
-// ==/UserScript==
-
 $(function () {
     var deleteTagList = ['BIG', 'I', 'B'];
     var separatorList = ['—', '-'];
+    var workPageList = ['talk'];
 
     var findImage = function (node) {
         if (node.tagName == 'IMG') {
@@ -48,6 +37,22 @@ $(function () {
         node.remove();
     }
 
+    var findSpecialTag = function (node) {
+        var makeDeleteTag = false;
+        deleteTagList.forEach((value) => { if (node.tagName == value) makeDeleteTag = true; })
+        var temp = node.parentNode, child;
+        if (makeDeleteTag) {
+            deleteTag(node);
+            child = temp.firstChild;
+        } else {
+            child = node.firstChild;
+        }
+        while (child) {
+            findSpecialTag(child);
+            child = child.nextSibling;
+        }
+    }
+
     var clean = function (node) {
         // 将给定元素及其所有子元素的class和style全部清除
         if (node.nodeType != 3) {
@@ -57,17 +62,7 @@ $(function () {
                 var child = node.firstChild;
                 while (child) {
                     clean(child);
-
-                    // 如果发现特殊标签，删除标签
-                    var makeDeleteTag = false;
-                    deleteTagList.forEach((value) => { if (node.tagName == value) makeDeleteTag = true; })
-                    if (makeDeleteTag) {
-                        var temp = child.nextSibling;
-                        deleteTag(node);
-                        child = temp;
-                    } else {
-                        child = child.nextSibling;
-                    }
+                    child = child.nextSibling;
                 }
             }
         }
@@ -132,12 +127,13 @@ $(function () {
 
         // 获取时间戳外文本上层的子元素。（防止时间戳被套Span标签）
         var parent = node.parentNode;
-        while (parent.tagName != 'P' && parent.tagName != 'DD') {
+        while (parent.nodeType != 1 || (parent.tagName != 'P' && parent.tagName != 'DD'
+            && parent.tagName != 'CITE' && parent.tagName != 'DIV')) {
             parent = parent.parentNode;
         }
-
         findImage(parent);
         cleanFromSeparator(parent);
+        findSpecialTag(parent);
     }
 
 
@@ -158,11 +154,10 @@ $(function () {
             }
         }
     };
-
-    checkAllElement(document.getElementsByClassName('mw-parser-output')[0]);
+    var start = false;
+    workPageList.forEach((value) => { if (mw.config.values['wgPageName'].search(value) != -1) start = true; })
+    if (start) {
+        console.log('[讨论页简洁化] 已加载');
+        checkAllElement(document.getElementsByClassName('mw-parser-output')[0]);
+    }
 });
-
-
-
-
-
